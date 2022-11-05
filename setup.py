@@ -9,6 +9,7 @@ EXTRAS_REQUIRE = {
 INSTALL_REQUIRES = [
     "ipykernel>=6.14.0",
     "ipython_genutils>=0.2.0",
+    "joblib",
     "jupyterlab>=3",
     "ipywidgets",
     "numpy>=1.21",
