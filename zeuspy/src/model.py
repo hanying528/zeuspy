@@ -126,26 +126,26 @@ class Metric:
         self.value = self.formula(y, y_pred)
 
 
-class ModelEvaluator:
-    def __int__(self, apply_on):
+class Evaluator:
+
+    def __init__(self, apply_on):
         self.apply_on = apply_on
         self.metric_list = []
 
     def calc_metrics(self, y, y_pred):
         for metric in self.metric_list:
-            print("#" * 20 + f"Model Results ({self.apply_on} set)" + "#" * 20)
             metric.calculate(y, y_pred)
 
     def display(self):
+        print("#" * 10 + f" Model Results ({self.apply_on} set) " + "#" * 10)
         for metric in self.metric_list:
-            print("#" * 20 + f"Model Results ({self.apply_on} set)" + "#" * 20)
             print(f'{metric.name}: {metric.value:.4f}')
 
 
-class RegressionModelEval(ModelEvaluator):
+class RegressionModelEval(Evaluator):
 
-    def __int__(self, apply_on):
-        super().__init__(apply_on25
+    def __init__(self, apply_on):
+        super().__init__(apply_on)
         self.model_type = 'regression'
         mse = Metric('Mean Squared Error', formula=mean_squared_error)
         r2 = Metric('R squared', formula=r2_score)
@@ -155,9 +155,10 @@ class RegressionModelEval(ModelEvaluator):
         return f"RegressionModelEval <model_type={self.model_type}, apply_on={self.apply_on}," \
                f"metrics={', '.join(m.name for m in self.metric_list)}>"
 
-class ClassifierEval(ModelEvaluator):
 
-    def __int__(self, apply_on):
+class ClassifierEval(Evaluator):
+
+    def __init__(self, apply_on):
         super().__init__(apply_on)
         self.model_type = 'classification'
         acc = Metric('Accuracy', formula=accuracy_score)
