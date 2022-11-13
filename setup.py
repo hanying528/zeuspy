@@ -3,7 +3,8 @@ from setuptools import setup, find_packages
 
 EXTRAS_REQUIRE = {
     "dev": [
-      "pytest"
+        "pytest",
+        "flake8"
     ],
 }
 INSTALL_REQUIRES = [
