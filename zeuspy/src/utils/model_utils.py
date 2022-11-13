@@ -7,6 +7,7 @@ from sklearn.metrics import confusion_matrix
 
 
 class ModelTrainingError(Exception):
+    """A custom exception to display user-friendly message when error occurred during model training process"""
     def __init__(self, model_name, orig_error_msg):
         self.model_name = model_name
         self.orig_error_msg = orig_error_msg
@@ -23,7 +24,7 @@ def catch_error(model_name: str):
             try:
                 return func(*args, **kwargs)
             except Exception as e:
-                raise ModelTrainingError({'model_name': model_name, 'orig_error_msg': e})
+                raise ModelTrainingError(**{'model_name': model_name, 'orig_error_msg': e})
         return wrapper
     return decorator_catch_error
 
@@ -47,6 +48,7 @@ def timer(msg: str):
 
 
 def scatter_plot_ys(y_true, y_pred, apply_on=''):
+    """Create a scatter plot given the actual and predicted Y"""
     color = 'b'
     marker = 'o'
     if apply_on == 'testing':
@@ -64,6 +66,7 @@ def scatter_plot_ys(y_true, y_pred, apply_on=''):
 
 
 def confusion_matrix_plot(y_true, y_pred, apply_on=''):
+    """Create a confusion matrix plot given the actual and predicted Y"""
     cf_matrix = confusion_matrix(y_true, y_pred)
     cmap = 'Blues'
     if apply_on == 'testing':

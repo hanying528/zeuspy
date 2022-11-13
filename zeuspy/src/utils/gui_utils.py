@@ -15,7 +15,7 @@ def load_data(file_path: str) -> pd.DataFrame:
         raise ValueError(f'{e.value}\nFailed to load data from: {file_path}')
 
 
-def train_model(data: pd.DataFrame, model_type : str, algorithm: str, target_var: str) -> None:
+def train_model(data: pd.DataFrame, model_type: str, algorithm: str, target_var: str) -> None:
     print(f"Training a {model_type} model using {algorithm} with target variable {target_var}..."
           "This might take a while ⏳")
     model = Model(model_type, target_var, algorithm=algorithm)

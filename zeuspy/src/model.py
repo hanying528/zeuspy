@@ -80,7 +80,7 @@ class Model:
 
     @timer("Training model took total:")
     def _train_regression_model(self, algo_name: str, X: Union[np.ndarray, pd.DataFrame],
-                          y: Union[np.array, np.ndarray, pd.Series]):
+                                y: Union[np.array, np.ndarray, pd.Series]):
         if algo_name == 'Linear Regression':
             self.model = _linear_regression(X, y)
         else:
