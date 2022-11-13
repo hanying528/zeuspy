@@ -17,7 +17,7 @@ def model_training_interface():
     box_layout = widgets.Layout(margin='10px 10px 10px 20px',
                                 display='flex')
     # input data
-    input_data_box = widgets.Text(value='data/toy_regression.csv',
+    input_data_box = widgets.Text(value='../data/toy_regression.csv',
                                   description='Input Data Location',
                                   style=style,
                                   layout=widgets.Layout(width='400px'))
