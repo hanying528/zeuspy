@@ -1,5 +1,7 @@
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Callable, Tuple
+from datetime import datetime
+from typing import Callable, Tuple, Union
 
 import joblib
 import numpy as np
@@ -8,18 +10,38 @@ from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.metrics import accuracy_score, f1_score, mean_squared_error, r2_score, roc_auc_score
 from sklearn.model_selection import train_test_split
 
+from .utils.model_utils import catch_error, confusion_matrix_plot, scatter_plot_ys, timer
+
 
 VALID_MODEL_TYPES = ('regression', 'classification')
-VALID_ALGORITHMS = {'regression': ('Linear Regression',),
+VALID_ALGORITHMS = {'regression': ('Linear Regression',
+                                   'SGD',
+                                   'Random Forest',
+                                   'XGBoost'),
                     'classification': ('Logistic Regression',
                                        'SVM',
-                                       'Random Forest')}
+                                       'Random Forest',
+                                       'XGBoost')}
+
+
+@catch_error('linear regression')
+def _linear_regression(X, y):
+    model = LinearRegression()
+    model.fit(X, y)
+    return model
+
+
+@catch_error('logistic regression')
+def _logistic_regression(X, y):
+    model = LogisticRegression()
+    model.fit(X, y)
+    return model
 
 
 class Model:
     """The core class for training and testing models"""
 
-    def __init__(self, model_type, target_var, algorithm=None, model_path=None):
+    def __init__(self, model_type: str, target_var: str, algorithm: str = None, model_path: str = None) -> None:
         self.model_type = model_type.lower()
         # `algorithm` won't matter if user wants to use a saved model,
         # only the model_type and target_var are required in that case
@@ -33,7 +55,7 @@ class Model:
             self.model = None
         self._validate_model_options()
 
-    def _load_model_object(self, model_path):
+    def _load_model_object(self, model_path: str):
         """Load the scikit-learn model from the given path"""
         raise NotImplementedError
 
@@ -41,77 +63,74 @@ class Model:
         """Ensure the model type and algorithm are supported"""
         if self.model_type not in VALID_MODEL_TYPES:
             raise ValueError(f"Model type must be one of the following: {VALID_MODEL_TYPES}")
-        if not self.model and not self.algorithm:
+        elif not self.model and not self.algorithm:
             raise ValueError("Algorithm is required if not using an existing model")
-        if self.algorithm not in VALID_ALGORITHMS[self.model_type]:
+        elif self.algorithm not in VALID_ALGORITHMS[self.model_type]:
             raise NotImplementedError(f'{self.algorithm} is currently not supported.')
 
-    def _train_test_split(self, data, ratio=0.7, seed=42) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    def _train_test_split(self, data: pd.DataFrame,
+                          ratio: float = 0.7, seed: int = 42) -> Tuple[pd.DataFrame, pd.DataFrame,
+                                                                       pd.Series, pd.Series]:
         """Split data into training and testing sets based on the ratio"""
         X = data.loc[:, data.columns != self.target_var]
         y = data[self.target_var]
         X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=ratio, random_state=seed)
         print(f"Splitting data into training set (shape: {X_train.shape}) and testing set (shape: {X_test.shape})")
-
         return X_train, X_test, y_train, y_test
 
-    def _linear_regression(self, X, y):
-        try:
-            self.model = LinearRegression()
-            self.model.fit(X, y)
-            self.evaluate_model(X, y, 'training')
-        except Exception as e:
-            raise RuntimeError(f"Unknown error occurred when training the linear regression model: {e}")
-
-    def _logistic_regression(self, X, y):
-        try:
-            self.model = LogisticRegression()
-            self.model.fit(X, y)
-            self.evaluate_model(X, y, 'training')
-        except Exception as e:
-            raise RuntimeError(f"Unknown error occurred when training the logistic regression model: {e}")
-
-    def _train_regression_model(self, algo_name, X, y):
+    @timer("Training model took total:")
+    def _train_regression_model(self, algo_name: str, X: Union[np.ndarray, pd.DataFrame],
+                          y: Union[np.array, np.ndarray, pd.Series]):
         if algo_name == 'Linear Regression':
-            self._linear_regression(X, y)
+            self.model = _linear_regression(X, y)
         else:
             raise NotImplementedError
 
-    def _train_classifier(self, algo_name, X, y):
+    @timer("Training model took total:")
+    def _train_classifier(self, algo_name: str, X: Union[np.ndarray, pd.DataFrame],
+                          y: Union[np.array, np.ndarray, pd.Series]):
         if algo_name == 'Logistic Regression':
-            self._logistic_regression(X, y)
+            self.model = _logistic_regression(X, y)
         else:
             raise NotImplementedError
 
-    def evaluate_model(self, X, y, apply_on):
+    def evaluate_model(self, X: Union[np.ndarray, pd.DataFrame], y: Union[np.array, np.ndarray, pd.Series],
+                       apply_on: str) -> None:
         """Evaluate the model performance on the given data set"""
         y_pred = self.model.predict(X)
         if self.model_type == 'regression':
             evaluator = RegressionModelEval(apply_on=apply_on)
         else:
             evaluator = ClassifierEval(apply_on=apply_on)
-        evaluator.calc_metrics(y, y_pred)
-        evaluator.display()
+        evaluator.evaluate_and_display(y, y_pred)
 
-    def save_model(self, save_to=None):
+    def save_model(self, save_to: str = None) -> None:
         """Save model object to disk"""
         if save_to:
             # TODO: Validate the provided path
             joblib.dump(self.model, save_to)
             print(f"Saved model object to {save_to}")
 
-    def train(self, data, save_to=None):
+    def train(self, data: pd.DataFrame, save_to: str = None) -> None:
         """Train the model on the training set and evaluate using the testing set"""
         X_train, X_test, y_train, y_test = self._train_test_split(data)
         if self.model_type == 'regression':
             self._train_regression_model(self.algorithm, X_train, y_train)
-            self.evaluate_model(X_test, y_test, 'testing')
+
         else:
             self._train_classifier(self.algorithm, X_train, y_train)
-            self.evaluate_model(X_test, y_test, 'testing')
+
+        # Evaluate model performance on training and testing set separately
+        self.evaluate_model(X_train, y_train, 'training')
+        self.evaluate_model(X_test, y_test, 'testing')
+
+        # TODO: Once parameter tuning feature is implemented, we should use the optimal
+        #  parameters to re-train the model using whole dataset. For now, only export the
+        #  model trained with the training set.
+        # self._train_classifier(self.algorithm, X, y_train)
 
         if not save_to:
-            suffix = '20221101'  # TODO: use today's date yyyymmdd format
+            suffix = datetime.today().strftime('%Y%m%d')
             save_to = f'{self.model_type}_{self.target_var}_{suffix}.pkl'
         self.save_model(save_to)
 
@@ -126,25 +145,44 @@ class Metric:
         self.value = self.formula(y, y_pred)
 
 
-class Evaluator:
+class Evaluator(ABC):
 
-    def __init__(self, apply_on):
+    def __init__(self, apply_on: str) -> None:
         self.apply_on = apply_on
         self.metric_list = []
+        self.y_actual = None
+        self.y_pred = None
 
-    def calc_metrics(self, y, y_pred):
+    @abstractmethod
+    def __repr__(self):
+        return
+
+    @abstractmethod
+    def _plot(self):
+        return
+
+    def _calc_metrics(self) -> None:
+        if self.y_actual is None or self.y_pred is None:
+            raise ValueError("Actual values and predictions must be defined before calculating evaluation metrics.")
         for metric in self.metric_list:
-            metric.calculate(y, y_pred)
+            metric.calculate(self.y_actual, self.y_pred)
 
-    def display(self):
+    def evaluate_and_display(self, y: Union[list, np.array, np.ndarray, pd.Series],
+                             y_pred: Union[list, np.array, np.ndarray, pd.Series]):
+        if len(y) != len(y_pred):
+            raise ValueError("y must have same length as y_pred")
+        self.y_actual = y
+        self.y_pred = y_pred
+        self._calc_metrics()
         print("#" * 10 + f" Model Results ({self.apply_on} set) " + "#" * 10)
         for metric in self.metric_list:
             print(f'{metric.name}: {metric.value:.4f}')
+        self._plot()
 
 
 class RegressionModelEval(Evaluator):
 
-    def __init__(self, apply_on):
+    def __init__(self, apply_on: str) -> None:
         super().__init__(apply_on)
         self.model_type = 'regression'
         mse = Metric('Mean Squared Error', formula=mean_squared_error)
@@ -155,10 +193,14 @@ class RegressionModelEval(Evaluator):
         return f"RegressionModelEval <model_type={self.model_type}, apply_on={self.apply_on}," \
                f"metrics={', '.join(m.name for m in self.metric_list)}>"
 
+    def _plot(self):
+        """Scatter plot of predicted y vs. actual y"""
+        scatter_plot_ys(self.y_actual, self.y_pred, self.apply_on)
+
 
 class ClassifierEval(Evaluator):
 
-    def __init__(self, apply_on):
+    def __init__(self, apply_on: str) -> None:
         super().__init__(apply_on)
         self.model_type = 'classification'
         acc = Metric('Accuracy', formula=accuracy_score)
@@ -169,3 +211,7 @@ class ClassifierEval(Evaluator):
     def __repr__(self):
         return f"ClassifierEval <model_type={self.model_type}, apply_on={self.apply_on}," \
                f"metrics={', '.join(m.name for m in self.metric_list)}>"
+
+    def _plot(self):
+        """Plot confusion matrix created based on actual y and predicted y"""
+        confusion_matrix_plot(self.y_actual, self.y_pred, self.apply_on)

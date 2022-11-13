@@ -1,1 +1,1 @@
-from .src.gui import create_interface
+from .src.gui import model_training_interface

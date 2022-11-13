@@ -4,13 +4,13 @@ import ipywidgets as widgets
 from IPython.display import display
 
 from .model import VALID_ALGORITHMS
-from .utils import load_data, train_model
+from .utils.gui_utils import load_data, train_model
 
 DEFAULT_MODEL_TYPE = 'regression'
 
 
-def create_interface():
-    """Instantiate user interface"""
+def model_training_interface():
+    """Instantiate user interface for training model"""
 
     style = {'description_width': '150px'}
     # TODO: Align all the boxes to left
@@ -85,3 +85,7 @@ def create_interface():
     box = widgets.HBox([input_data_box, load_btn],
                        layout=box_layout)
     display(widgets.VBox([box, out]))
+
+
+def model_testing_interface():
+    raise NotImplementedError
