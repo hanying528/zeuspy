@@ -13,7 +13,6 @@ def model_training_interface():
     """Instantiate user interface for training model"""
 
     style = {'description_width': '150px'}
-    # TODO: Align all the boxes to left
     box_layout = widgets.Layout(margin='10px 10px 10px 20px',
                                 display='flex')
     # input data

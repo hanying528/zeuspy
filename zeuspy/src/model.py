@@ -12,7 +12,6 @@ from sklearn.model_selection import train_test_split
 
 from .utils.model_utils import catch_error, confusion_matrix_plot, scatter_plot_ys, timer
 
-
 VALID_MODEL_TYPES = ('regression', 'classification')
 VALID_ALGORITHMS = {'regression': ('Linear Regression',
                                    'SGD',
@@ -68,9 +67,9 @@ class Model:
         elif self.algorithm not in VALID_ALGORITHMS[self.model_type]:
             raise NotImplementedError(f'{self.algorithm} is currently not supported.')
 
-    def _train_test_split(self, data: pd.DataFrame,
-                          ratio: float = 0.7, seed: int = 42) -> Tuple[pd.DataFrame, pd.DataFrame,
-                                                                       pd.Series, pd.Series]:
+    def _train_test_split(self, data: pd.DataFrame, ratio: float = 0.7, seed: int = 42) -> Tuple[pd.DataFrame,
+                                                                                                 pd.DataFrame,
+                                                                                                 pd.Series, pd.Series]:
         """Split data into training and testing sets based on the ratio"""
         X = data.loc[:, data.columns != self.target_var]
         y = data[self.target_var]
@@ -127,7 +126,6 @@ class Model:
         # TODO: Once parameter tuning feature is implemented, we should use the optimal
         #  parameters to re-train the model using whole dataset. For now, only export the
         #  model trained with the training set.
-        # self._train_classifier(self.algorithm, X, y_train)
 
         if not save_to:
             suffix = datetime.today().strftime('%Y%m%d')
